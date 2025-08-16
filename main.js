@@ -1,5 +1,5 @@
 // Importa los módulos necesarios
-const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, screen, Tray, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config(); // Carga las variables de entorno desde .env
@@ -38,7 +38,6 @@ function initializeGemini() {
         console.log("SDK de Gemini inicializado.");
     } else {
         console.error("La API Key de Gemini no está configurada. Por favor, guárdala en la configuración.");
-        // Podríamos mostrar un diálogo de error aquí si fuera necesario
     }
 }
 
@@ -56,6 +55,7 @@ function fileToGenerativePart(base64, mimeType) {
 
 let mainWindow;
 let settingsWindow; // Referencia a la ventana de configuración
+let tray = null; // Referencia al icono de la bandeja del sistema
 
 // --- Función para crear la ventana de configuración ---
 function createSettingsWindow() {
@@ -65,11 +65,10 @@ function createSettingsWindow() {
     }
 
     settingsWindow = new BrowserWindow({
-        width: 450,
-        height: 250,
+        width: 500,
+        height: 300,
         title: 'Configuración',
-        parent: mainWindow,
-        modal: true,
+        center: true,
         frame: true,
         autoHideMenuBar: true,
         resizable: false,
@@ -141,6 +140,26 @@ function toggleWindow() {
 app.whenReady().then(() => {
   initializeGemini(); // Inicializa Gemini al arrancar
   createWindow();
+
+  // --- Crear el icono de la bandeja del sistema ---
+  const iconPath = path.join(__dirname, 'build', 'icon.png');
+  if (fs.existsSync(iconPath)) {
+    tray = new Tray(iconPath);
+
+    const contextMenu = Menu.buildFromTemplate([
+      { label: 'Salir', type: 'normal', click: () => app.quit() }
+    ]);
+
+    tray.setToolTip('Asistente Gemini');
+    tray.setContextMenu(contextMenu);
+
+    tray.on('click', () => {
+      toggleWindow();
+    });
+  } else {
+    console.log('Icono de bandeja no encontrado en build/icon.png, la bandeja no será creada.');
+  }
+  // --- Fin de la lógica de la bandeja ---
 
   // Registra el atajo de teclado global 'Control+Space'
   const ret = globalShortcut.register('CommandOrControl+Space', () => {
@@ -217,32 +236,29 @@ ipcMain.handle('save-api-key', async (event, apiKey) => {
 
 
 // Escucha las peticiones de la API desde el renderer process
-ipcMain.handle('call-gemini-api', async (event, { prompt, base64ImageData }) => {
-    console.log("Recibida petición para la API de Gemini:", { prompt, image: base64ImageData ? 'Sí' : 'No' });
+ipcMain.handle('call-gemini-api', async (event, { prompt, base64ImageData, history }) => {
+    console.log("Recibida petición para la API de Gemini:", { prompt, image: !!base64ImageData, history_length: history?.length || 0 });
     
-    // Verifica si el SDK está inicializado
     if (!genAI) {
         return "Error: La API Key de Gemini no ha sido configurada. Por favor, ve a la configuración y añade tu clave.";
     }
 
     try {
-        const modelName = base64ImageData ? "gemini-pro-vision" : "gemini-pro";
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({
+            model: "gemini-2.5-flash",
+            systemInstruction: "Responde siempre en español, de forma clara y concisa.",
+        });
+
+        const chat = model.startChat({ history: history || [] });
+        const messageParts = [prompt];
 
         if (base64ImageData) {
-            // --- Lógica para peticiones con imagen ---
-            const imageParts = [
-                fileToGenerativePart(base64ImageData, "image/png"),
-            ];
-            const result = await model.generateContent([prompt, ...imageParts]);
-            const response = await result.response;
-            return response.text();
-        } else {
-            // --- Lógica para peticiones solo de texto ---
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            return response.text();
+            messageParts.push(fileToGenerativePart(base64ImageData, "image/png"));
         }
+
+        const result = await chat.sendMessage(messageParts);
+        const response = await result.response;
+        return response.text();
 
     } catch (error) {
         console.error("Error al llamar a la API de Gemini:", error);

@@ -8,17 +8,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendIcon = document.getElementById('send-icon');
     const loadingSpinner = document.getElementById('loading-spinner');
     const chatContainer = document.getElementById('chat-container');
-    const dropZone = document.getElementById('drop-zone');
     const imagePreviewContainer = document.getElementById('image-preview-container');
     const imagePreview = document.getElementById('image-preview');
     const removeImageBtn = document.getElementById('remove-image-btn');
     const closeBtn = document.getElementById('close-btn');
+    const newChatBtn = document.getElementById('new-chat-btn');
     const settingsBtn = document.getElementById('settings-btn'); // Botón de configuración
     const titleBar = document.getElementById('title-bar');
     const formContainer = document.getElementById('form-container');
 
     let imageData = null; // Almacenará la imagen en base64
     let isExpanded = false; // Controla si la ventana está expandida
+    let chatHistory = []; // Almacena el historial de la conversación actual
 
     // --- Constantes de tamaño ---
     const INITIAL_HEIGHT = 80;
@@ -58,50 +59,38 @@ document.addEventListener('DOMContentLoaded', () => {
             titleBar.classList.add('hidden');
             chatContainer.classList.add('hidden');
             chatContainer.innerHTML = '';
+            chatHistory = []; // Limpia el historial
             formContainer.classList.add('items-center');
             setWindowHeight(INITIAL_HEIGHT);
         }
     };
 
-    // --- Lógica de arrastrar y soltar ---
-    window.addEventListener('dragenter', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('hidden');
-        dropZone.classList.add('flex');
-    });
-
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-    });
-
-    dropZone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('hidden');
-        dropZone.classList.remove('flex');
-    });
-
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('hidden');
-        dropZone.classList.remove('flex');
-
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            const file = files[0];
-            if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    imageData = reader.result.split(',')[1];
-                    imagePreview.src = reader.result;
-                    imagePreviewContainer.classList.remove('hidden');
-                    promptInput.focus();
-                    if (!isExpanded) {
-                        toggleExpand(true);
-                    }
-                    updateContentHeight();
-                };
-                reader.readAsDataURL(file);
+    // --- Lógica para pegar imágenes ---
+    document.addEventListener('paste', (event) => {
+        const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+        let imageFile = null;
+        for (const item of items) {
+            if (item.type.indexOf('image') !== -1) {
+                imageFile = item.getAsFile();
+                break;
             }
+        }
+
+        if (imageFile) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const dataUrl = e.target.result;
+                imageData = dataUrl.split(',')[1];
+                imagePreview.src = dataUrl;
+                imagePreviewContainer.classList.remove('hidden');
+                promptInput.focus();
+
+                if (!isExpanded) {
+                    toggleExpand(true);
+                }
+                updateContentHeight();
+            };
+            reader.readAsDataURL(imageFile);
         }
     });
 
@@ -117,6 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const submittedImageData = imageData;
+        const historyForApi = [...chatHistory]; // Copia el historial ANTES de añadir el nuevo mensaje
+
         addMessage(promptText, 'user', imageData ? imagePreview.src : null);
         
         promptInput.value = '';
@@ -124,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setLoading(true);
 
         try {
-            const response = await window.api.callGemini(promptText, submittedImageData);
+            const response = await window.api.callGemini(promptText, submittedImageData, historyForApi);
             addMessage(response, 'gemini');
         } catch (error) {
             console.error('Error:', error);
@@ -141,6 +132,11 @@ document.addEventListener('DOMContentLoaded', () => {
     closeBtn.addEventListener('click', () => {
         toggleExpand(false);
         window.api.closeWindow();
+    });
+
+    // El botón de nueva conversación limpia y contrae la ventana
+    newChatBtn.addEventListener('click', () => {
+        toggleExpand(false);
     });
 
     // El botón de configuración abre la ventana de ajustes
@@ -204,5 +200,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Actualiza la altura después de añadir el mensaje
         updateContentHeight();
+
+        // Añade el mensaje al historial para el contexto
+        if (sender === 'user') {
+            chatHistory.push({ role: 'user', parts: [{ text }] });
+        } else if (sender === 'gemini' && !isError) {
+            chatHistory.push({ role: 'model', parts: [{ text }] });
+        }
     }
 });
