@@ -13,7 +13,7 @@
 ## ✨ Características
 
 - **Ventana Flotante:** Accede a Gemini rápidamente a través de una pequeña ventana que está siempre encima de las demás.
-- **Atajo Global:** Muestra u oculta la ventana instantáneamente con el atajo `Ctrl+Space`.
+- **Atajo Global:** Muestra u oculta la ventana instantáneamente con el atajo `Ctrl+Space`. Ahora también puedes iniciar una nueva conversación rápidamente con `Ctrl+T` cuando la ventana está visible.
 - **Interfaz Adaptable:** La ventana cambia de tamaño para ajustarse al contenido de la conversación.
 - **Soporte Multimedia:** Envía consultas de texto o pega imágenes directamente en el campo de texto para realizar consultas visuales.
 - **Historial de Conversación:** La aplicación recuerda el contexto de la conversación actual.
