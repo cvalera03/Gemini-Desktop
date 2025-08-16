@@ -20,6 +20,10 @@ export interface ConfigState {
   autoHide: boolean;
   incognitoMode: boolean;
   dataRetention: number; // días
+  autoCleanup: boolean;
+  cleanupSchedule: 'daily' | 'weekly' | 'monthly';
+  maxStorageSize: number; // MB
+  keepRecentDays: number; // días para mantener conversaciones recientes
   selectedModel: string;
   modelConfig: {
     temperature: number;
@@ -56,6 +60,10 @@ export class ConfigStore extends BaseStore<ConfigState> {
       autoHide: true,
       incognitoMode: false,
       dataRetention: 30, // 30 días por defecto
+      autoCleanup: false,
+      cleanupSchedule: 'weekly',
+      maxStorageSize: 100, // 100 MB por defecto
+      keepRecentDays: 7, // Mantener últimos 7 días siempre
       selectedModel: 'gemini-2.5-flash',
       modelConfig: {
         temperature: 0.7,
@@ -224,6 +232,67 @@ export class ConfigStore extends BaseStore<ConfigState> {
   // Verificar si la configuración es válida
   isConfigValid(): boolean {
     return this.state.apiKey.length > 0;
+  }
+
+  // Actualizar configuración de limpieza automática
+  async setAutoCleanup(enabled: boolean, schedule?: 'daily' | 'weekly' | 'monthly'): Promise<void> {
+    const updates: Partial<ConfigState> = { autoCleanup: enabled };
+    if (schedule) {
+      updates.cleanupSchedule = schedule;
+    }
+    this.setState(updates);
+    await this.save();
+  }
+
+  // Actualizar límite de almacenamiento
+  async setMaxStorageSize(sizeMB: number): Promise<void> {
+    this.setState({ maxStorageSize: Math.max(10, sizeMB) }); // Mínimo 10MB
+    await this.save();
+  }
+
+  // Actualizar días para mantener conversaciones recientes
+  async setKeepRecentDays(days: number): Promise<void> {
+    this.setState({ keepRecentDays: Math.max(1, days) }); // Mínimo 1 día
+    await this.save();
+  }
+
+  // Obtener configuración de privacidad
+  getPrivacySettings(): {
+    incognitoMode: boolean;
+    dataRetention: number;
+    autoCleanup: boolean;
+    cleanupSchedule: string;
+    maxStorageSize: number;
+    keepRecentDays: number;
+  } {
+    return {
+      incognitoMode: this.state.incognitoMode,
+      dataRetention: this.state.dataRetention,
+      autoCleanup: this.state.autoCleanup,
+      cleanupSchedule: this.state.cleanupSchedule,
+      maxStorageSize: this.state.maxStorageSize,
+      keepRecentDays: this.state.keepRecentDays
+    };
+  }
+
+  // Verificar si debe ejecutarse limpieza automática
+  shouldRunAutoCleanup(): boolean {
+    if (!this.state.autoCleanup) return false;
+    
+    const lastSaved = this.state.lastSaved;
+    const now = Date.now();
+    const timeDiff = now - lastSaved;
+    
+    switch (this.state.cleanupSchedule) {
+      case 'daily':
+        return timeDiff > 24 * 60 * 60 * 1000; // 1 día
+      case 'weekly':
+        return timeDiff > 7 * 24 * 60 * 60 * 1000; // 7 días
+      case 'monthly':
+        return timeDiff > 30 * 24 * 60 * 60 * 1000; // 30 días
+      default:
+        return false;
+    }
   }
 
   // Obtener configuración compatible con la interfaz AppConfig

@@ -128,10 +128,22 @@ app.whenReady().then(async () => {
   }
 
   initializeGemini(); // Inicializa Gemini al arrancar
+  
+  // Verificar si necesita limpieza automática
+  if (chatStore.needsCleanup()) {
+    console.log('Ejecutando limpieza automática...');
+    try {
+      const cleanupResult = await chatStore.smartCleanup();
+      console.log('Limpieza automática completada:', cleanupResult);
+    } catch (error) {
+      console.error('Error en limpieza automática:', error);
+    }
+  }
+  
   createWindow();
 
   // --- Crear el icono de la bandeja del sistema ---
-  const iconPath: string = path.join(__dirname, 'build', 'icon.png');
+  const iconPath: string = path.join(__dirname, '..', 'build', 'icon.png');
   if (fs.existsSync(iconPath)) {
     tray = new Tray(iconPath);
 
@@ -204,6 +216,67 @@ ipcMain.handle('resize-window', async (_event, { height: newHeight }: { height: 
 // --- IPC Handlers para Configuración ---
 ipcMain.on('open-settings-window', () => {
     createSettingsWindow();
+});
+
+// Variables para las ventanas
+let privacyWindow: BrowserWindow | null = null;
+
+// Crear ventana de configuración de privacidad
+function createPrivacyWindow(): void {
+    console.log('createPrivacyWindow llamada, privacyWindow existe:', !!privacyWindow);
+    
+    if (privacyWindow) {
+        console.log('Ventana de privacidad ya existe, enfocando...');
+        privacyWindow.focus();
+        return;
+    }
+
+    console.log('Creando nueva ventana de privacidad...');
+    privacyWindow = new BrowserWindow({
+        width: 900,
+        height: 800,
+        title: 'Configuración de Privacidad',
+        center: true,
+        frame: true,
+        autoHideMenuBar: true,
+        resizable: true,
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            nodeIntegration: false,
+            contextIsolation: true,
+        }
+    });
+
+    console.log('Attempting to load privacy-settings.html');
+    privacyWindow.loadFile('privacy-settings.html');
+
+    privacyWindow.on('closed', () => {
+        console.log('Ventana de privacidad cerrada');
+        privacyWindow = null;
+    });
+    
+    privacyWindow.on('ready-to-show', () => {
+        console.log('Ventana de privacidad lista para mostrar');
+        privacyWindow?.show();
+    });
+}
+
+ipcMain.on('open-privacy-window', () => {
+    console.log('Recibido evento open-privacy-window');
+    createPrivacyWindow();
+});
+
+// Cerrar ventana de configuración
+ipcMain.on('close-settings-window', () => {
+    console.log('Recibido evento close-settings-window');
+    if (settingsWindow) {
+        console.log('Cerrando ventana de configuración principal');
+        settingsWindow.close();
+    }
+    if (privacyWindow) {
+        console.log('Cerrando ventana de privacidad');
+        privacyWindow.close();
+    }
 });
 
 ipcMain.handle('get-api-key', async (): Promise<string> => {
@@ -317,6 +390,113 @@ ipcMain.handle('set-theme', async (_event, theme: 'light' | 'dark' | 'system'): 
         return { success: true };
     } catch (error) {
         console.error('Error al cambiar tema:', error);
+        return { success: false };
+    }
+});
+
+// --- IPC Handlers para Conversaciones ---
+
+// Obtener todas las conversaciones
+ipcMain.handle('get-all-conversations', async (): Promise<any[]> => {
+    return chatStore.getAllConversations();
+});
+
+// Cargar una conversación específica
+ipcMain.handle('load-conversation', async (_event, conversationId: string): Promise<any> => {
+    return chatStore.loadConversation(conversationId);
+});
+
+// Eliminar una conversación
+ipcMain.handle('delete-conversation', async (_event, conversationId: string): Promise<void> => {
+    chatStore.deleteConversation(conversationId);
+});
+
+// Buscar conversaciones
+ipcMain.handle('search-conversations', async (_event, query: string): Promise<any[]> => {
+    return chatStore.searchConversations(query);
+});
+
+// --- Handlers para funcionalidades de privacidad ---
+
+// Activar/desactivar modo incógnito
+ipcMain.handle('set-incognito-mode', async (_event, enabled: boolean): Promise<{ success: boolean }> => {
+    try {
+        await configStore.setIncognitoMode(enabled);
+        
+        if (enabled) {
+            console.log('Modo incógnito activado - las conversaciones no se guardarán');
+        } else {
+            console.log('Modo incógnito desactivado - las conversaciones se guardarán normalmente');
+        }
+        
+        return { success: true };
+    } catch (error) {
+        console.error('Error al cambiar modo incógnito:', error);
+        return { success: false };
+    }
+});
+
+// Obtener configuración de privacidad
+ipcMain.handle('get-privacy-settings', async (): Promise<any> => {
+    return configStore.getPrivacySettings();
+});
+
+// Actualizar configuración de retención de datos
+ipcMain.handle('set-data-retention', async (_event, days: number): Promise<{ success: boolean }> => {
+    try {
+        await configStore.setDataRetention(days);
+        return { success: true };
+    } catch (error) {
+        console.error('Error al actualizar retención de datos:', error);
+        return { success: false };
+    }
+});
+
+// Configurar limpieza automática
+ipcMain.handle('set-auto-cleanup', async (_event, enabled: boolean, schedule?: 'daily' | 'weekly' | 'monthly'): Promise<{ success: boolean }> => {
+    try {
+        await configStore.setAutoCleanup(enabled, schedule);
+        return { success: true };
+    } catch (error) {
+        console.error('Error al configurar limpieza automática:', error);
+        return { success: false };
+    }
+});
+
+// Ejecutar limpieza manual
+ipcMain.handle('run-cleanup', async (): Promise<any> => {
+    try {
+        const result = await chatStore.smartCleanup();
+        return { success: true, ...result };
+    } catch (error) {
+        console.error('Error al ejecutar limpieza:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Error desconocido' };
+    }
+});
+
+// Limpiar todos los datos
+ipcMain.handle('clear-all-data', async (): Promise<{ success: boolean }> => {
+    try {
+        await chatStore.clearAllData();
+        return { success: true };
+    } catch (error) {
+        console.error('Error al limpiar todos los datos:', error);
+        return { success: false };
+    }
+});
+
+// Obtener información de almacenamiento
+ipcMain.handle('get-storage-info', async (): Promise<any> => {
+    return chatStore.getStorageInfo();
+});
+
+// Exportar todos los datos
+ipcMain.handle('export-all-data', async (): Promise<{ success: boolean; data?: string }> => {
+    try {
+        const data = await chatStore.exportAllData();
+        return { success: true, data };
+    } catch (error) {
+        console.error('Error al exportar datos:', error);
         return { success: false };
     }
 });

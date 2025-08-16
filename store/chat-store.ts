@@ -117,6 +117,27 @@ export class ChatStore extends BaseStore<ChatState> {
 
   // Métodos públicos para gestión de chat
 
+  // Obtener todas las conversaciones
+  getAllConversations(): Conversation[] {
+    return this.state.conversations.map(conv => ({
+      ...conv,
+      messageCount: conv.messages.length,
+      lastMessage: conv.messages[conv.messages.length - 1]?.content || ''
+    }));
+  }
+
+  // Cargar una conversación específica
+  loadConversation(conversationId: string): Conversation | null {
+    const conversation = this.state.conversations.find(conv => conv.id === conversationId);
+    if (conversation) {
+      this.setState({
+        currentConversation: conversation
+      });
+      return conversation;
+    }
+    return null;
+  }
+
   // Crear nueva conversación
   async createConversation(firstMessage?: string): Promise<string> {
     const conversationId = this.generateId();
@@ -156,8 +177,21 @@ export class ChatStore extends BaseStore<ChatState> {
     return false;
   }
 
+  // Verificar si está en modo incógnito
+  private isIncognitoMode(): boolean {
+    // Importar configStore para verificar modo incógnito
+    const { configStore } = require('./index');
+    return configStore.get('incognitoMode');
+  }
+
   // Agregar mensaje a la conversación actual
   async addMessage(content: string, role: 'user' | 'assistant', model?: string): Promise<string> {
+    // Si está en modo incógnito, no guardar el mensaje
+    if (this.isIncognitoMode()) {
+      console.log('Modo incógnito activado - mensaje no guardado');
+      return 'incognito-message';
+    }
+
     if (!this.state.currentConversation) {
       await this.createConversation(role === 'user' ? content : undefined);
     }
@@ -234,13 +268,19 @@ export class ChatStore extends BaseStore<ChatState> {
   }
 
   // Buscar conversaciones
-  searchConversations(query: string): void {
+  searchConversations(query: string): Conversation[] {
     const filteredConversations = this.filterConversations(this.state.conversations, query);
     
     this.setState({
       searchQuery: query,
       filteredConversations
     });
+    
+    return filteredConversations.map(conv => ({
+      ...conv,
+      messageCount: conv.messages.length,
+      lastMessage: conv.messages[conv.messages.length - 1]?.content || ''
+    }));
   }
 
   // Filtrar conversaciones por query
@@ -361,5 +401,133 @@ export class ChatStore extends BaseStore<ChatState> {
       role: msg.role === 'assistant' ? 'model' : msg.role,
       parts: [{ text: msg.content }]
     }));
+  }
+
+  // Limpiar todos los datos (para modo incógnito)
+  async clearAllData(): Promise<void> {
+    this.setState({
+      currentConversation: null,
+      conversations: [],
+      filteredConversations: [],
+      totalMessages: 0,
+      searchQuery: '',
+      lastMessageId: ''
+    });
+    await this.save();
+    console.log('Todos los datos de chat han sido eliminados');
+  }
+
+  // Limpieza inteligente basada en configuración
+  async smartCleanup(): Promise<{
+    deletedConversations: number;
+    freedSpaceMB: number;
+    keptRecent: number;
+  }> {
+    const { configStore } = require('./index');
+    const config = configStore.getPrivacySettings();
+    
+    if (!config.autoCleanup) {
+      return { deletedConversations: 0, freedSpaceMB: 0, keptRecent: 0 };
+    }
+
+    const now = Date.now();
+    const retentionMs = config.dataRetention * 24 * 60 * 60 * 1000;
+    const keepRecentMs = config.keepRecentDays * 24 * 60 * 60 * 1000;
+    
+    let conversationsToKeep: Conversation[] = [];
+    let deletedCount = 0;
+    let estimatedFreedSpace = 0;
+
+    for (const conv of this.state.conversations) {
+      const age = now - conv.updatedAt;
+      const isRecent = age < keepRecentMs;
+      const isWithinRetention = age < retentionMs;
+      
+      if (isRecent || isWithinRetention) {
+        conversationsToKeep.push(conv);
+      } else {
+        deletedCount++;
+        // Estimar espacio liberado (aproximado)
+        estimatedFreedSpace += JSON.stringify(conv).length;
+      }
+    }
+
+    // Verificar límite de almacenamiento
+    const currentSizeBytes = JSON.stringify(conversationsToKeep).length;
+    const maxSizeBytes = config.maxStorageSize * 1024 * 1024; // MB a bytes
+    
+    if (currentSizeBytes > maxSizeBytes) {
+      // Eliminar conversaciones más antiguas hasta estar bajo el límite
+      conversationsToKeep.sort((a, b) => b.updatedAt - a.updatedAt);
+      
+      while (JSON.stringify(conversationsToKeep).length > maxSizeBytes && conversationsToKeep.length > 0) {
+        const removed = conversationsToKeep.pop();
+        if (removed) {
+          deletedCount++;
+          estimatedFreedSpace += JSON.stringify(removed).length;
+        }
+      }
+    }
+
+    // Actualizar estado
+    this.setState({
+      conversations: conversationsToKeep,
+      filteredConversations: this.filterConversations(conversationsToKeep, this.state.searchQuery),
+      totalMessages: this.calculateTotalMessages(conversationsToKeep),
+      currentConversation: conversationsToKeep.find(conv => conv.id === this.state.currentConversation?.id) || null
+    });
+
+    await this.save();
+
+    const result = {
+      deletedConversations: deletedCount,
+      freedSpaceMB: Math.round(estimatedFreedSpace / (1024 * 1024) * 100) / 100,
+      keptRecent: conversationsToKeep.filter(conv => (now - conv.updatedAt) < keepRecentMs).length
+    };
+
+    console.log('Limpieza inteligente completada:', result);
+    return result;
+  }
+
+  // Obtener tamaño actual de almacenamiento
+  getStorageInfo(): {
+    totalConversations: number;
+    totalMessages: number;
+    estimatedSizeMB: number;
+    oldestDate: Date | null;
+    newestDate: Date | null;
+  } {
+    const conversations = this.state.conversations;
+    const estimatedSizeBytes = JSON.stringify(conversations).length;
+    
+    return {
+      totalConversations: conversations.length,
+      totalMessages: this.state.totalMessages,
+      estimatedSizeMB: Math.round(estimatedSizeBytes / (1024 * 1024) * 100) / 100,
+      oldestDate: conversations.length > 0 
+        ? new Date(Math.min(...conversations.map(conv => conv.createdAt)))
+        : null,
+      newestDate: conversations.length > 0
+        ? new Date(Math.max(...conversations.map(conv => conv.updatedAt)))
+        : null
+    };
+  }
+
+  // Exportar todos los datos antes de limpieza
+  async exportAllData(): Promise<string> {
+    const data = {
+      exportDate: new Date().toISOString(),
+      totalConversations: this.state.conversations.length,
+      totalMessages: this.state.totalMessages,
+      conversations: this.state.conversations
+    };
+    
+    return JSON.stringify(data, null, 2);
+  }
+
+  // Verificar si necesita limpieza automática
+  needsCleanup(): boolean {
+    const { configStore } = require('./index');
+    return configStore.shouldRunAutoCleanup();
   }
 }

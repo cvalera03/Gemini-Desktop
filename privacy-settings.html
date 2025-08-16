@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración de Privacidad</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #f8fafc; /* slate-50 */
+            font-family: sans-serif;
+        }
+        .input-beauty {
+            transition: box-shadow 0.2s, border 0.2s;
+            box-shadow: 0 2px 8px 0 rgba(99, 102, 241, 0.08);
+        }
+        .input-beauty:focus {
+            border-color: #6366f1; /* indigo-500 */
+            box-shadow: 0 4px 16px 0 rgba(99, 102, 241, 0.18);
+        }
+        .btn-beauty {
+            background: linear-gradient(90deg, #6366f1 0%, #818cf8 100%);
+            color: #fff;
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 8px 0 rgba(99, 102, 241, 0.12);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .btn-beauty:hover {
+            background: linear-gradient(90deg, #818cf8 0%, #6366f1 100%);
+            box-shadow: 0 4px 16px 0 rgba(99, 102, 241, 0.18);
+        }
+        .btn-danger {
+            background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+        }
+        .btn-danger:hover {
+            background: linear-gradient(90deg, #f87171 0%, #ef4444 100%);
+        }
+        .btn-success {
+            background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+        }
+        .btn-success:hover {
+            background: linear-gradient(90deg, #34d399 0%, #10b981 100%);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #6366f1;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        /* Mejorar tooltips */
+        [title] {
+            position: relative;
+        }
+        
+        .cursor-help {
+            cursor: help !important;
+        }
+        
+        /* Animación para elementos con tooltips */
+        [title]:hover {
+            transition: all 0.2s ease;
+        }
+        
+        /* Estilos para elementos informativos */
+        .info-icon {
+            display: inline-block;
+            margin-left: 4px;
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+        }
+        
+        .info-icon:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="p-6 fade-in">
+    <div class="max-w-4xl mx-auto space-y-6">
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-slate-800">Configuración de Privacidad y Datos</h1>
+            <button id="back-btn" class="btn-beauty font-bold py-2 px-4 rounded-lg">
+                ← Volver
+            </button>
+        </div>
+
+        <!-- Modo Incógnito -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-800 cursor-help" 
+                        title="Cuando está activado, las conversaciones no se guardan en el disco. Útil para conversaciones sensibles o temporales.">
+                        Modo Incógnito 🔒
+                    </h2>
+                    <p class="text-sm text-slate-600">Las conversaciones no se guardarán cuando esté activado</p>
+                </div>
+                <label class="toggle-switch" title="Activar/desactivar modo incógnito">
+                    <input type="checkbox" id="incognito-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div id="incognito-status" class="text-sm font-medium"></div>
+        </div>
+
+        <!-- Retención de Datos -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-lg font-semibold text-slate-800 mb-4">Retención de Datos</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="data-retention" class="block text-sm font-medium text-slate-600 mb-2 cursor-help" 
+                           title="Número máximo de días que se mantendrán las conversaciones antes de ser eliminadas automáticamente">
+                        Mantener conversaciones por (días) ℹ️
+                    </label>
+                    <input type="number" id="data-retention" min="1" max="365" value="30"
+                           class="input-beauty w-full bg-white border border-slate-300 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                           title="Rango: 1-365 días. Las conversaciones más antiguas que este período serán eliminadas automáticamente.">
+                </div>
+                <div>
+                    <label for="keep-recent" class="block text-sm font-medium text-slate-600 mb-2 cursor-help" 
+                           title="Conversaciones de los últimos N días que nunca serán eliminadas, incluso si exceden el período de retención">
+                        Siempre mantener últimos (días) ℹ️
+                    </label>
+                    <input type="number" id="keep-recent" min="1" max="30" value="7"
+                           class="input-beauty w-full bg-white border border-slate-300 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                           title="Rango: 1-30 días. Estas conversaciones recientes siempre se mantendrán como protección adicional.">
+                </div>
+            </div>
+        </div>
+
+        <!-- Limpieza Automática -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-800 cursor-help" 
+                        title="Sistema inteligente que elimina automáticamente conversaciones antiguas según las reglas configuradas">
+                        Limpieza Automática 🧹
+                    </h2>
+                    <p class="text-sm text-slate-600">Eliminar automáticamente conversaciones antiguas</p>
+                </div>
+                <label class="toggle-switch" title="Activar/desactivar limpieza automática">
+                    <input type="checkbox" id="auto-cleanup-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div id="cleanup-options" class="space-y-4">
+                <div>
+                    <label for="cleanup-schedule" class="block text-sm font-medium text-slate-600 mb-2 cursor-help" 
+                           title="Frecuencia con la que se ejecutará la limpieza automática al iniciar la aplicación">
+                        Frecuencia de limpieza ⏰
+                    </label>
+                    <select id="cleanup-schedule" 
+                            class="input-beauty w-full bg-white border border-slate-300 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                            title="Selecciona cada cuánto tiempo se ejecutará la limpieza automática">
+                        <option value="daily">Diaria</option>
+                        <option value="weekly" selected>Semanal</option>
+                        <option value="monthly">Mensual</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="max-storage" class="block text-sm font-medium text-slate-600 mb-2 cursor-help" 
+                           title="Límite máximo de espacio en disco que pueden ocupar las conversaciones. Si se supera, se eliminan las más antiguas">
+                        Límite de almacenamiento (MB) 💾
+                    </label>
+                    <input type="number" id="max-storage" min="10" max="1000" value="100"
+                           class="input-beauty w-full bg-white border border-slate-300 rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                           title="Rango: 10-1000 MB. Cuando se supere este límite, se eliminarán automáticamente las conversaciones más antiguas">
+                </div>
+            </div>
+        </div>
+
+        <!-- Información de Almacenamiento -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-lg font-semibold text-slate-800 mb-4 cursor-help" 
+                title="Estadísticas en tiempo real sobre el uso de almacenamiento de tus conversaciones">
+                Información de Almacenamiento 📊
+            </h2>
+            <div id="storage-info" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                <div class="bg-slate-50 rounded-lg p-4 cursor-help" 
+                     title="Número total de conversaciones guardadas en el dispositivo">
+                    <div class="text-2xl font-bold text-indigo-600" id="total-conversations">-</div>
+                    <div class="text-sm text-slate-600">Conversaciones</div>
+                </div>
+                <div class="bg-slate-50 rounded-lg p-4 cursor-help" 
+                     title="Número total de mensajes (tuyos y de Gemini) almacenados">
+                    <div class="text-2xl font-bold text-indigo-600" id="total-messages">-</div>
+                    <div class="text-sm text-slate-600">Mensajes</div>
+                </div>
+                <div class="bg-slate-50 rounded-lg p-4 cursor-help" 
+                     title="Espacio aproximado que ocupan todas las conversaciones en el disco">
+                    <div class="text-2xl font-bold text-indigo-600" id="storage-size">-</div>
+                    <div class="text-sm text-slate-600">MB Usados</div>
+                </div>
+            </div>
+            <div class="mt-4 text-xs text-slate-500" id="storage-dates"></div>
+        </div>
+
+        <!-- Acciones -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-lg font-semibold text-slate-800 mb-4">Acciones de Datos</h2>
+            <div class="flex flex-wrap gap-4">
+                <button id="run-cleanup-btn" class="btn-beauty font-bold py-2 px-4 rounded-lg" 
+                        title="Ejecuta inmediatamente la limpieza según las reglas configuradas. Te mostrará cuántas conversaciones se eliminaron.">
+                    🧹 Ejecutar Limpieza
+                </button>
+                <button id="export-data-btn" class="btn-success font-bold py-2 px-4 rounded-lg" 
+                        title="Descarga un archivo JSON con todas tus conversaciones. Útil para hacer respaldos.">
+                    📤 Exportar Datos
+                </button>
+                <button id="clear-all-btn" class="btn-danger font-bold py-2 px-4 rounded-lg" 
+                        title="PELIGRO: Elimina permanentemente todas las conversaciones. Esta acción no se puede deshacer.">
+                    🗑️ Eliminar Todo
+                </button>
+            </div>
+        </div>
+
+        <!-- Mensajes de Estado -->
+        <div id="status-message" class="hidden p-4 rounded-lg text-center font-medium"></div>
+    </div>
+
+    <script src="./dist/privacy-settings.js"></script>
+</body>
+</html>
