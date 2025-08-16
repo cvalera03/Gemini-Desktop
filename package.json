@@ -1,6 +1,6 @@
 {
   "name": "gemini-desktop-assistant",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Una pequeña ventana flotante para interactuar con Gemini.",
   "main": "dist/main.js",
   "scripts": {
