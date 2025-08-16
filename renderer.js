@@ -94,6 +94,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- Atajo de teclado para nueva conversación (Ctrl+T) ---
+    document.addEventListener('keydown', (event) => {
+        // Solo si la ventana está expandida y visible
+        if (event.ctrlKey && event.key === 't' && isExpanded) {
+            event.preventDefault(); // Evita el comportamiento por defecto del navegador (ej. abrir nueva pestaña)
+            toggleExpand(false); // Limpia y contrae la conversación
+        }
+    });
+
     // --- Lógica del formulario ---
     promptForm.addEventListener('submit', async (e) => {
         e.preventDefault();
