@@ -4,13 +4,14 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // Expone funciones seguras al proceso de renderizado (nuestra página web)
 contextBridge.exposeInMainWorld('api', {
-  // Llama a la API de Gemini en el proceso principal
+  // --- Funciones de la ventana principal ---
   callGemini: (prompt, base64ImageData) => 
     ipcRenderer.invoke('call-gemini-api', { prompt, base64ImageData }),
-  
-  // Pide al proceso principal que redimensione la ventana
   resizeWindow: (options) => ipcRenderer.invoke('resize-window', options),
+  closeWindow: () => ipcRenderer.send('hide-window'),
 
-  // Pide al proceso principal que oculte la ventana
-  closeWindow: () => ipcRenderer.send('hide-window')
+  // --- Funciones para la ventana de configuración ---
+  openSettingsWindow: () => ipcRenderer.send('open-settings-window'),
+  saveApiKey: (apiKey) => ipcRenderer.invoke('save-api-key', apiKey),
+  getApiKey: () => ipcRenderer.invoke('get-api-key')
 });
