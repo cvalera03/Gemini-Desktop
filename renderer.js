@@ -11,9 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const imagePreviewContainer = document.getElementById('image-preview-container');
     const imagePreview = document.getElementById('image-preview');
     const removeImageBtn = document.getElementById('remove-image-btn');
-    const closeBtn = document.getElementById('close-btn');
     const newChatBtn = document.getElementById('new-chat-btn');
     const settingsBtn = document.getElementById('settings-btn'); // Botón de configuración
+    console.log('settingsBtn element:', settingsBtn); // <-- Added log
     const titleBar = document.getElementById('title-bar');
     const formContainer = document.getElementById('form-container');
 
@@ -137,12 +137,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Botón para quitar la imagen seleccionada
     removeImageBtn.addEventListener('click', resetImage);
     
-    // El botón de cerrar ahora limpia y contrae la ventana antes de ocultarla
-    closeBtn.addEventListener('click', () => {
-        toggleExpand(false);
-        window.api.closeWindow();
-    });
-
     // El botón de nueva conversación limpia y contrae la ventana
     newChatBtn.addEventListener('click', () => {
         toggleExpand(false);
@@ -150,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // El botón de configuración abre la ventana de ajustes
     settingsBtn.addEventListener('click', () => {
+        console.log('Settings button clicked in renderer.js'); // <-- Added log
         window.api.openSettingsWindow();
     });
 

@@ -36,8 +36,6 @@ function initializeGemini() {
     if (apiKey) {
         genAI = new GoogleGenerativeAI(apiKey);
         console.log("SDK de Gemini inicializado.");
-    } else {
-        console.error("La API Key de Gemini no está configurada. Por favor, guárdala en la configuración.");
     }
 }
 
@@ -79,6 +77,7 @@ function createSettingsWindow() {
         }
     });
 
+    console.log('Attempting to load settings.html'); // <-- Added log
     settingsWindow.loadFile('settings.html');
 
     settingsWindow.on('closed', () => {
