@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const imagePreview = document.getElementById('image-preview');
     const removeImageBtn = document.getElementById('remove-image-btn');
     const closeBtn = document.getElementById('close-btn');
+    const settingsBtn = document.getElementById('settings-btn'); // Botón de configuración
     const titleBar = document.getElementById('title-bar');
     const formContainer = document.getElementById('form-container');
 
@@ -140,6 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
     closeBtn.addEventListener('click', () => {
         toggleExpand(false);
         window.api.closeWindow();
+    });
+
+    // El botón de configuración abre la ventana de ajustes
+    settingsBtn.addEventListener('click', () => {
+        window.api.openSettingsWindow();
     });
 
     // --- Funciones auxiliares ---
