@@ -1,37 +1,61 @@
 // Este script se ejecuta en la página HTML (el proceso de renderizado).
 // Gestiona toda la interacción del usuario en la ventana.
+
+// Definir tipos para los elementos del DOM
+interface DOMElements {
+  promptForm: HTMLFormElement;
+  promptInput: HTMLInputElement;
+  submitBtn: HTMLButtonElement;
+  sendIcon: HTMLElement;
+  loadingSpinner: HTMLElement;
+  chatContainer: HTMLElement;
+  imagePreviewContainer: HTMLElement;
+  imagePreview: HTMLImageElement;
+  removeImageBtn: HTMLButtonElement;
+  newChatBtn: HTMLButtonElement;
+  settingsBtn: HTMLButtonElement;
+  titleBar: HTMLElement;
+  formContainer: HTMLElement;
+}
+
+// Definir tipos para el historial del chat
+interface ChatMessage {
+  role: 'user' | 'model';
+  parts: Array<{ text: string }>;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // --- Referencias a elementos del DOM ---
-    const promptForm = document.getElementById('prompt-form');
-    const promptInput = document.getElementById('prompt-input');
-    const submitBtn = document.getElementById('submit-btn');
-    const sendIcon = document.getElementById('send-icon');
-    const loadingSpinner = document.getElementById('loading-spinner');
-    const chatContainer = document.getElementById('chat-container');
-    const imagePreviewContainer = document.getElementById('image-preview-container');
-    const imagePreview = document.getElementById('image-preview');
-    const removeImageBtn = document.getElementById('remove-image-btn');
-    const newChatBtn = document.getElementById('new-chat-btn');
-    const settingsBtn = document.getElementById('settings-btn'); // Botón de configuración
+    const promptForm = document.getElementById('prompt-form') as HTMLFormElement;
+    const promptInput = document.getElementById('prompt-input') as HTMLInputElement;
+    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+    const sendIcon = document.getElementById('send-icon') as HTMLElement;
+    const loadingSpinner = document.getElementById('loading-spinner') as HTMLElement;
+    const chatContainer = document.getElementById('chat-container') as HTMLElement;
+    const imagePreviewContainer = document.getElementById('image-preview-container') as HTMLElement;
+    const imagePreview = document.getElementById('image-preview') as HTMLImageElement;
+    const removeImageBtn = document.getElementById('remove-image-btn') as HTMLButtonElement;
+    const newChatBtn = document.getElementById('new-chat-btn') as HTMLButtonElement;
+    const settingsBtn = document.getElementById('settings-btn') as HTMLButtonElement; // Botón de configuración
     console.log('settingsBtn element:', settingsBtn); // <-- Added log
-    const titleBar = document.getElementById('title-bar');
-    const formContainer = document.getElementById('form-container');
+    const titleBar = document.getElementById('title-bar') as HTMLElement;
+    const formContainer = document.getElementById('form-container') as HTMLElement;
 
-    let imageData = null; // Almacenará la imagen en base64
-    let isExpanded = false; // Controla si la ventana está expandida
-    let chatHistory = []; // Almacena el historial de la conversación actual
+    let imageData: string | undefined = undefined; // Almacenará la imagen en base64
+    let isExpanded: boolean = false; // Controla si la ventana está expandida
+    let chatHistory: ChatMessage[] = []; // Almacena el historial de la conversación actual
 
     // --- Constantes de tamaño ---
-    const INITIAL_HEIGHT = 80;
-    const MAX_HEIGHT = 600;
+    const INITIAL_HEIGHT: number = 80;
+    const MAX_HEIGHT: number = 600;
 
     // --- Lógica para redimensionar la ventana ---
-    function setWindowHeight(newHeight) {
+    function setWindowHeight(newHeight: number): void {
         const clampedHeight = Math.max(INITIAL_HEIGHT, Math.min(newHeight, MAX_HEIGHT));
         window.api.resizeWindow({ height: clampedHeight });
     }
 
-    function updateContentHeight() {
+    function updateContentHeight(): void {
         requestAnimationFrame(() => {
             if (!isExpanded) return;
 
@@ -46,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Lógica para expandir/contraer la ventana ---
-    const toggleExpand = (expand) => {
+    const toggleExpand = (expand: boolean): void => {
         if (isExpanded === expand) return;
         isExpanded = expand;
         
@@ -66,9 +90,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Lógica para pegar imágenes ---
-    document.addEventListener('paste', (event) => {
-        const items = (event.clipboardData || event.originalEvent.clipboardData).items;
-        let imageFile = null;
+    document.addEventListener('paste', (event: ClipboardEvent) => {
+        const items = (event.clipboardData || (event as any).originalEvent?.clipboardData)?.items;
+        if (!items) return;
+        
+        let imageFile: File | null = null;
         for (const item of items) {
             if (item.type.indexOf('image') !== -1) {
                 imageFile = item.getAsFile();
@@ -78,8 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (imageFile) {
             const reader = new FileReader();
-            reader.onload = (e) => {
-                const dataUrl = e.target.result;
+            reader.onload = (e: ProgressEvent<FileReader>) => {
+                const dataUrl = e.target?.result as string;
                 imageData = dataUrl.split(',')[1];
                 imagePreview.src = dataUrl;
                 imagePreviewContainer.classList.remove('hidden');
@@ -95,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Atajo de teclado para nueva conversación (Ctrl+T) ---
-    document.addEventListener('keydown', (event) => {
+    document.addEventListener('keydown', (event: KeyboardEvent) => {
         // Solo si la ventana está expandida y visible
         if (event.ctrlKey && event.key === 't' && isExpanded) {
             event.preventDefault(); // Evita el comportamiento por defecto del navegador (ej. abrir nueva pestaña)
@@ -104,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Lógica del formulario ---
-    promptForm.addEventListener('submit', async (e) => {
+    promptForm.addEventListener('submit', async (e: Event) => {
         e.preventDefault();
         const promptText = promptInput.value.trim();
 
@@ -124,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setLoading(true);
 
         try {
-            const response = await window.api.callGemini(promptText, submittedImageData, historyForApi);
+            const response = await window.api.callGemini(promptText, submittedImageData || undefined, historyForApi);
             addMessage(response, 'gemini');
         } catch (error) {
             console.error('Error:', error);
@@ -149,8 +175,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Funciones auxiliares ---
-    function resetImage() {
-        imageData = null;
+    function resetImage(): void {
+        imageData = undefined;
         imagePreview.src = '';
         imagePreviewContainer.classList.add('hidden');
         if(isExpanded) {
@@ -158,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function setLoading(isLoading) {
+    function setLoading(isLoading: boolean): void {
         if (isLoading) {
             sendIcon.classList.add('hidden');
             loadingSpinner.classList.remove('hidden');
@@ -173,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function addMessage(text, sender, imgSrc = null, isError = false) {
+    function addMessage(text: string, sender: 'user' | 'gemini', imgSrc: string | null = null, isError: boolean = false): void {
         const messageWrapper = document.createElement('div');
         messageWrapper.className = `flex mb-4 ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
 

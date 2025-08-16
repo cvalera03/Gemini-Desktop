@@ -2,17 +2,25 @@
   "name": "gemini-desktop-assistant",
   "version": "0.2.2",
   "description": "Una pequeña ventana flotante para interactuar con Gemini.",
-  "main": "main.js",
+  "main": "dist/main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "dev": "tsc && electron .",
+    "build:ts": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rimraf dist"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/electron": "^1.4.38",
+    "@types/node": "^24.3.0",
     "electron": "^28.0.0",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.12",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.2"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -22,19 +30,16 @@
     "appId": "com.gemini.desktop.assistant",
     "productName": "Gemini Assistant",
     "files": [
-      "main.js",
-      "preload.js",
-      "renderer.js",
+      "dist/**/*",
       "index.html",
       "settings.html",
-      "settings.js",
       "package.json",
       "node_modules/",
       "build/"
     ],
     "win": {
       "target": "nsis",
-      "icon": "build/icon.ico"
+      "icon": "build/icon.png"
     },
     "nsis": {
       "oneClick": false,

@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const apiKeyInput = document.getElementById('api-key-input');
-    const saveBtn = document.getElementById('save-btn');
-    const feedbackMessage = document.getElementById('feedback-message');
+    const apiKeyInput = document.getElementById('api-key-input') as HTMLInputElement;
+    const saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
+    const feedbackMessage = document.getElementById('feedback-message') as HTMLElement;
 
     // Al cargar la ventana, pide la clave actual al proceso principal y la muestra
-    async function loadApiKey() {
+    async function loadApiKey(): Promise<void> {
         try {
             const apiKey = await window.api.getApiKey();
             if (apiKey) {
