@@ -60,7 +60,7 @@ function createSettingsWindow(): void {
     });
 
     console.log('Attempting to load settings.html'); // <-- Added log
-    settingsWindow.loadFile('settings.html');
+    settingsWindow.loadFile(path.join(app.getAppPath(), 'settings.html'));
 
     settingsWindow.on('closed', () => {
         settingsWindow = null;
@@ -96,7 +96,7 @@ function createWindow(): void {
     }
   });
 
-  mainWindow.loadFile('index.html');
+  mainWindow.loadFile(path.join(app.getAppPath(), 'index.html'));
 
   // Cuando la ventana pierde el foco, simplemente la ocultamos
   mainWindow.on('blur', () => {
@@ -248,7 +248,7 @@ function createPrivacyWindow(): void {
     });
 
     console.log('Attempting to load privacy-settings.html');
-    privacyWindow.loadFile('privacy-settings.html');
+    privacyWindow.loadFile(path.join(app.getAppPath(), 'privacy-settings.html'));
 
     privacyWindow.on('closed', () => {
         console.log('Ventana de privacidad cerrada');
